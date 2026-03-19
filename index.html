@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MySGAME AI - VERCEL MODE</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+        body { font-family: 'Share Tech Mono', monospace; background: #050505; color: #00ffcc; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; }
+        #login { border: 1px solid #00ffcc; padding: 30px; text-align: center; margin-top: 50px; }
+        #main { display: none; width: 100%; max-width: 450px; }
+        .card { border: 1px solid #333; background: #0a0a0a; padding: 15px; margin-bottom: 10px; text-align: center; }
+        .input { width: 100%; padding: 10px; background: #111; border: 1px solid #444; color: #00ffcc; margin-bottom: 10px; text-align: center; }
+        .btn { width: 100%; padding: 10px; background: #00ffcc; color: #000; font-weight: bold; border: none; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; border: 1px solid #00ffcc; font-size: 0.8rem; }
+        th, td { border: 1px solid #222; padding: 8px; text-align: center; }
+        .win { color: #0f0; } .lose { color: #f33; } .wait { color: #ff0; }
+    </style>
+</head>
+<body>
+    <div id="login">
+        <h2>MySGAME V7</h2>
+        <input type="password" id="pass" class="input" placeholder="ACCESS KEY">
+        <button class="btn" onclick="start()">MASUK</button>
+    </div>
+    <div id="main">
+        <div class="card">
+            <h3 id="stat">STATUS: STANDBY</h3>
+            <div id="timer" style="color: #ffcc00; font-size: 1.2rem; margin-top: 10px;">--s</div>
+        </div>
+        <table>
+            <thead><tr><th>PERIOD</th><th>PRED</th><th>RESULT</th><th>STATUS</th></tr></thead>
+            <tbody id="logs"></tbody>
+        </table>
+    </div>
+<script>
+    let last = null; let hist = [];
+    async function check() {
+        try {
+            const res = await fetch("/api/proxy"); // Ini panggil fail api/proxy.js tadi
+            const json = await res.json();
+            const latest = json.data.list[0];
+            const issue = latest.issue;
+            document.getElementById("stat").innerText = "STATUS: ONLINE";
+            if (issue !== last) {
+                hist.forEach(r => {
+                    if(r.issue === issue && r.status === "WAIT") {
+                        const actual = parseInt(latest.number) >= 5 ? "BIG" : "SMALL";
+                        r.res = actual; r.status = (r.pred === actual) ? "WIN" : "LOSE";
+                    }
+                });
+                const pred = (parseInt(latest.number) >= 5) ? "BIG" : "SMALL"; // Simple Shadow logic
+                hist.unshift({ issue: (parseInt(issue)+1).toString(), pred: pred, res: "...", status: "WAIT" });
+                if(hist.length > 8) hist.pop();
+                last = issue;
+                document.getElementById("logs").innerHTML = hist.map(h => `
+                    <tr><td>${h.issue.slice(-4)}</td><td>${h.pred}</td><td>${h.res}</td><td class="${h.status.toLowerCase()}">${h.status}</td></tr>
+                `).join('');
+            }
+        } catch(e) { document.getElementById("stat").innerText = "RECONNECTING..."; }
+    }
+    function start() {
+        if(document.getElementById("pass").value === "Wan00") {
+            document.getElementById("login").style.display = "none";
+            document.getElementById("main").style.display = "block";
+            setInterval(() => {
+                const s = new Date().getSeconds();
+                document.getElementById("timer").innerText = (60 - s) + "s";
+                if(s % 3 === 0) check();
+            }, 1000);
+            check();
+        }
+    }
+</script>
+</body>
+</html>

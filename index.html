@@ -2,70 +2,97 @@
 <html lang="ms">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MySGAME AI - VERCEL MODE</title>
+    <title>MySGAME V11 - SUPREME</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
-        body { font-family: 'Share Tech Mono', monospace; background: #050505; color: #00ffcc; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px; }
-        #login { border: 1px solid #00ffcc; padding: 30px; text-align: center; margin-top: 50px; }
-        #main { display: none; width: 100%; max-width: 450px; }
-        .card { border: 1px solid #333; background: #0a0a0a; padding: 15px; margin-bottom: 10px; text-align: center; }
-        .input { width: 100%; padding: 10px; background: #111; border: 1px solid #444; color: #00ffcc; margin-bottom: 10px; text-align: center; }
-        .btn { width: 100%; padding: 10px; background: #00ffcc; color: #000; font-weight: bold; border: none; cursor: pointer; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; border: 1px solid #00ffcc; font-size: 0.8rem; }
-        th, td { border: 1px solid #222; padding: 8px; text-align: center; }
-        .win { color: #0f0; } .lose { color: #f33; } .wait { color: #ff0; }
+        body { font-family: 'Share Tech Mono', monospace; background: #050505; color: #00ffcc; text-align: center; padding: 20px; }
+        .card { border: 2px solid #00ffcc; padding: 20px; background: #000; margin: 20px auto; max-width: 400px; box-shadow: 0 0 10px #00ffcc44; }
+        input { width: 100%; padding: 12px; background: #111; border: 1px solid #444; color: #00ffcc; margin-bottom: 10px; text-align: center; }
+        button { width: 100%; padding: 12px; background: #00ffcc; color: #000; font-weight: bold; border: none; cursor: pointer; }
+        #main { display: none; }
+        table { width: 100%; margin-top: 15px; border-collapse: collapse; font-size: 0.8rem; border: 1px solid #333; }
+        th, td { border: 1px solid #222; padding: 10px; }
+        .win { color: #0f0; text-shadow: 0 0 5px #0f0; } .lose { color: #f33; } .wait { color: #ff0; animation: b 1s infinite; }
+        @keyframes b { 50% { opacity: 0.3; } }
     </style>
 </head>
 <body>
-    <div id="login">
-        <h2>MySGAME V7</h2>
-        <input type="password" id="pass" class="input" placeholder="ACCESS KEY">
-        <button class="btn" onclick="start()">MASUK</button>
+
+    <div id="login" class="card">
+        <h2>MySGAME V11</h2>
+        <input type="password" id="key" placeholder="ACCESS KEY">
+        <button onclick="start()">CONNECT</button>
     </div>
+
     <div id="main">
         <div class="card">
-            <h3 id="stat">STATUS: STANDBY</h3>
-            <div id="timer" style="color: #ffcc00; font-size: 1.2rem; margin-top: 10px;">--s</div>
+            <h3 id="status" style="color:#f33">RECONNECTING...</h3>
+            <h1 id="timer">--s</h1>
         </div>
         <table>
-            <thead><tr><th>PERIOD</th><th>PRED</th><th>RESULT</th><th>STATUS</th></tr></thead>
+            <thead><tr><th>PERIOD</th><th>PRED</th><th>RESULT</th><th>STAT</th></tr></thead>
             <tbody id="logs"></tbody>
         </table>
     </div>
+
 <script>
-    let last = null; let hist = [];
+    let last = null; let hist = []; let w=0, l=0;
+
     async function check() {
         try {
-            const res = await fetch("/api/proxy"); // Ini panggil fail api/proxy.js tadi
-            const json = await res.json();
+            // Kita guna AllOrigins Bridge - Ini "jalan belakang" paling sakti
+            const target = encodeURIComponent('https://draw.ar-lottery01.com/WinGo/WinGo_1M/GetHistoryIssuePage.json');
+            const res = await fetch(`https://api.allorigins.win/get?url=${target}&t=${Date.now()}`);
+            const data = await res.json();
+            const json = JSON.parse(data.contents); // AllOrigins bungkus data dalam 'contents'
+            
             const latest = json.data.list[0];
-            const issue = latest.issue;
-            document.getElementById("stat").innerText = "STATUS: ONLINE";
-            if (issue !== last) {
+            document.getElementById("status").innerText = "ONLINE";
+            document.getElementById("status").style.color = "#00ffcc";
+
+            if (latest.issue !== last) {
+                // Update Result
                 hist.forEach(r => {
-                    if(r.issue === issue && r.status === "WAIT") {
-                        const actual = parseInt(latest.number) >= 5 ? "BIG" : "SMALL";
-                        r.res = actual; r.status = (r.pred === actual) ? "WIN" : "LOSE";
+                    if (r.issue === latest.issue && r.status === "WAIT") {
+                        const s = parseInt(latest.number) >= 5 ? "BIG" : "SMALL";
+                        r.res = s; r.status = (r.pred === s) ? "WIN" : "LOSE";
                     }
                 });
-                const pred = (parseInt(latest.number) >= 5) ? "BIG" : "SMALL"; // Simple Shadow logic
-                hist.unshift({ issue: (parseInt(issue)+1).toString(), pred: pred, res: "...", status: "WAIT" });
-                if(hist.length > 8) hist.pop();
-                last = issue;
-                document.getElementById("logs").innerHTML = hist.map(h => `
-                    <tr><td>${h.issue.slice(-4)}</td><td>${h.pred}</td><td>${h.res}</td><td class="${h.status.toLowerCase()}">${h.status}</td></tr>
-                `).join('');
+
+                // Prediction Baru
+                const next = (BigInt(latest.issue) + 1n).toString();
+                const p = (parseInt(latest.number) >= 5) ? "BIG" : "SMALL";
+
+                hist.unshift({ issue: next, pred: p, res: "...", status: "WAIT" });
+                if (hist.length > 8) hist.pop();
+                last = latest.issue;
+                render();
             }
-        } catch(e) { document.getElementById("stat").innerText = "RECONNECTING..."; }
+        } catch (e) { 
+            document.getElementById("status").innerText = "RECONNECTING..."; 
+            document.getElementById("status").style.color = "#f33";
+        }
     }
+
+    function render() {
+        document.getElementById("logs").innerHTML = hist.map(h => `
+            <tr>
+                <td>${h.issue.slice(-4)}</td>
+                <td style="color:${h.pred=='BIG'?'#ffcc00':'#00ffcc'}">${h.pred}</td>
+                <td>${h.res}</td>
+                <td class="${h.status.toLowerCase()}">${h.status}</td>
+            </tr>
+        `).join('');
+    }
+
     function start() {
-        if(document.getElementById("pass").value === "Wan00") {
+        if (document.getElementById("key").value === "Wan00") {
             document.getElementById("login").style.display = "none";
             document.getElementById("main").style.display = "block";
             setInterval(() => {
                 const s = new Date().getSeconds();
                 document.getElementById("timer").innerText = (60 - s) + "s";
-                if(s % 3 === 0) check();
+                if (s % 5 === 0) check();
             }, 1000);
             check();
         }

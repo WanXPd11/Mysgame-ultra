@@ -2,85 +2,87 @@
 <html lang="ms">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MySGAME V5 - ANTI RECONNECT</title>
+    <title>MySGAME V5 - FINAL FIXED</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Share Tech Mono', monospace; background: #050505; color: #00ffcc; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        #login-page { background: #000; border: 1px solid #00ffcc; padding: 30px; text-align: center; width: 90%; max-width: 400px; }
-        .input-box { width: 100%; padding: 12px; background: #111; border: 1px solid #444; color: #00ffcc; text-align: center; margin-bottom: 15px; font-family: inherit; }
+        #login-page { background: #000; border: 1px solid #00ffcc; padding: 30px; text-align: center; width: 95%; max-width: 400px; box-shadow: 0 0 15px #00ffcc33; }
+        .input-box { width: 100%; padding: 12px; background: #111; border: 1px solid #444; color: #00ffcc; text-align: center; margin-bottom: 15px; font-family: inherit; font-size: 1.2rem; }
         .btn { width: 100%; padding: 12px; background: #00ffcc; color: #000; font-weight: bold; border: none; cursor: pointer; font-family: inherit; }
-        #main-page { display: none; width: 100%; max-width: 500px; padding: 15px; }
+        #main-page { display: none; width: 100%; max-width: 500px; padding: 10px; }
         .box { border: 1px solid #00ffcc; padding: 15px; margin-bottom: 10px; background: rgba(0,255,204,0.05); text-align: center; }
-        .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-        table { width: 100%; border-collapse: collapse; border: 1px solid #333; font-size: 0.8rem; }
-        th, td { border: 1px solid #222; padding: 8px; text-align: center; }
+        .timer { font-size: 2.5rem; color: #ffcc00; font-weight: bold; margin: 10px 0; }
+        table { width: 100%; border-collapse: collapse; border: 1px solid #333; font-size: 0.8rem; background: #000; }
+        th, td { border: 1px solid #222; padding: 10px; text-align: center; }
         th { background: #0a1919; color: #ffcc00; }
-        .badge { padding: 3px 6px; font-weight: bold; color: #000; border-radius: 2px; }
-        .win { background: #0f0; } .lose { background: #f33; color: #fff; } .wait { background: #ff0; animation: bl 1s infinite; }
+        .badge { padding: 4px 8px; font-weight: bold; color: #000; border-radius: 2px; text-transform: uppercase; }
+        .win { background: #0f0; } .lose { background: #f33; color: #fff; } .wait { background: #ffcc00; animation: bl 1s infinite; }
         @keyframes bl { 50% { opacity: 0.3; } }
     </style>
 </head>
 <body>
 
     <div id="login-page">
-        <h1>MySGAME V5</h1>
-        <p style="color:#666; font-size:0.8rem; margin-bottom:15px;">STABLE SERVER MODE</p>
+        <h1 style="margin-bottom:10px;">MySGAME V5</h1>
+        <p style="color:#666; font-size:0.7rem; margin-bottom:20px;">STABLE BYPASS MODE</p>
         <input type="password" id="pass" class="input-box" placeholder="ACCESS KEY">
-        <button class="btn" onclick="start()">CONNECT SYSTEM</button>
+        <button class="btn" onclick="start()">ACTIVATE SYSTEM</button>
     </div>
 
     <div id="main-page">
         <div class="box">
-            <h2 id="status" style="color:#f33">RECONNECTING...</h2>
-            <h1 id="timer">00s</h1>
+            <div id="status" style="color:#f33; font-size:0.8rem;">INITIALIZING...</div>
+            <div id="timer" class="timer">--s</div>
+            <div style="font-size:0.7rem; color:#444;">WINGO 1M - REALTIME</div>
         </div>
-        <div class="stats">
-            <div class="box">WIN: <span id="w" style="color:#0f0">0</span></div>
-            <div class="box">LOSE: <span id="l" style="color:#f33">0</span></div>
-        </div>
-        <table>
-            <thead><tr><th>PERIOD</th><th>PRED</th><th>RESULT</th><th>STAT</th></tr></thead>
+        <table id="myTable">
+            <thead>
+                <tr><th>PERIOD</th><th>PRED</th><th>RESULT</th><th>STATUS</th></tr>
+            </thead>
             <tbody id="logs"></tbody>
         </table>
     </div>
 
 <script>
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbyPx0OoPEAn0Iz8eVz_9F6jZj6RqVtQUYW84sgtPhmmbaUR0AwCtWpfV4N-IshmeFGJ/exec";
-    let history = []; let lastId = null; let win = 0; let lose = 0;
+    let lastId = null; let history = []; let w=0, l=0;
 
-    async function getData() {
+    async function updateData() {
+        // GUNA PROXY BARU YANG LAGI "LEPAS" UNTUK SAFARI/CHROME
+        const target = "https://draw.ar-lottery01.com/WinGo/WinGo_1M/GetHistoryIssuePage.json";
+        const proxy = "https://corsproxy.io/?" + encodeURIComponent(target);
+
         try {
-            // Gunakan Google Script kau yang dah 'Anyone' tadi
-            const res = await fetch(GAS_URL);
+            const res = await fetch(proxy + "&t=" + Date.now());
             const data = await res.json();
-            const list = data.data.list;
-            const top = list[0];
-            const issue = String(top.issue);
+            const latest = data.data.list[0];
+            const currentIssue = String(latest.issue);
 
-            document.getElementById("status").innerText = "ONLINE";
+            document.getElementById("status").innerText = "● SERVER ONLINE";
             document.getElementById("status").style.color = "#00ffcc";
 
-            if (issue !== lastId) {
-                history.forEach(h => {
-                    if (h.id === issue && h.status === "WAIT") {
-                        const s = parseInt(top.number) >= 5 ? "BIG" : "SMALL";
-                        h.res = s;
-                        if (h.pred === s) { win++; h.status = "WIN"; }
-                        else { lose++; h.status = "LOSE"; }
+            if (currentIssue !== lastId) {
+                // Check Win/Lose
+                history.forEach(row => {
+                    if (row.id === currentIssue && row.status === "WAIT") {
+                        const resSize = parseInt(latest.number) >= 5 ? "BIG" : "SMALL";
+                        row.res = resSize + " (" + latest.number + ")";
+                        if (row.pred === resSize) { row.status = "WIN"; } 
+                        else { row.status = "LOSE"; }
                     }
                 });
 
-                const nextId = (BigInt(issue) + 1n).toString();
-                const myPred = parseInt(top.number) >= 5 ? "BIG" : "SMALL";
-
-                history.unshift({ id: nextId, pred: myPred, res: "...", status: "WAIT" });
-                if (history.length > 6) history.pop();
-                lastId = issue;
+                // Generate Next Prediction
+                const nextId = (BigInt(currentIssue) + 1n).toString();
+                const aiPred = parseInt(latest.number) >= 5 ? "BIG" : "SMALL";
+                
+                history.unshift({ id: nextId, pred: aiPred, res: "...", status: "WAIT" });
+                if (history.length > 7) history.pop();
+                lastId = currentIssue;
                 render();
             }
         } catch (e) {
-            document.getElementById("status").innerText = "RECONNECTING...";
+            document.getElementById("status").innerText = "● RECONNECTING...";
             document.getElementById("status").style.color = "#f33";
         }
     }
@@ -89,13 +91,11 @@
         document.getElementById("logs").innerHTML = history.map(h => `
             <tr>
                 <td>${h.id.slice(-4)}</td>
-                <td style="color:${h.pred === 'BIG' ? '#ffcc00' : '#00ffcc'}">${h.pred}</td>
+                <td style="color:${h.pred === 'BIG' ? '#ffcc00' : '#00ffcc'}; font-weight:bold;">${h.pred}</td>
                 <td>${h.res}</td>
                 <td><span class="badge ${h.status.toLowerCase()}">${h.status}</span></td>
             </tr>
         `).join('');
-        document.getElementById("w").innerText = win;
-        document.getElementById("l").innerText = lose;
     }
 
     function start() {
@@ -103,12 +103,14 @@
             document.getElementById("login-page").style.display = "none";
             document.getElementById("main-page").style.display = "block";
             setInterval(() => {
-                const s = new Date().getSeconds();
-                document.getElementById("timer").innerText = (60 - s) + "s";
-                if (s % 5 === 0) getData();
+                const sec = new Date().getSeconds();
+                document.getElementById("timer").innerText = (60 - sec) + "s";
+                if (sec % 3 === 0) updateData();
             }, 1000);
-            getData();
-        } else { alert("KEY SALAH"); }
+            updateData();
+        } else {
+            alert("KEY SALAH!");
+        }
     }
 </script>
 </body>

@@ -1,171 +1,62 @@
-<!DOCTYPE html>
-<html lang="ms">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MySGAME AI - PRO V5 (FIXED)</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Share Tech Mono', monospace; background-color: #050505; color: #00ffcc; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-image: radial-gradient(circle, #0a1919 0%, #000000 100%); }
-        #login-page { background: rgba(0, 0, 0, 0.8); border: 1px solid #00ffcc; padding: 40px; border-radius: 10px; text-align: center; box-shadow: 0 0 20px rgba(0, 255, 204, 0.2); width: 90%; max-width: 400px; }
-        .input-box { width: 100%; padding: 12px; background: #111; border: 1px solid #444; color: #00ffcc; text-align: center; font-size: 1.2rem; outline: none; margin-bottom: 15px; font-family: inherit; }
-        .btn { width: 100%; padding: 12px; background: #00ffcc; color: #000; font-size: 1.1rem; font-weight: bold; border: none; cursor: pointer; font-family: inherit; }
-        #main-page { display: none; width: 100%; max-width: 600px; padding: 15px; }
-        .header-box { border: 1px solid #00ffcc; padding: 15px; text-align: center; margin-bottom: 15px; background: rgba(0, 255, 204, 0.05); }
-        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
-        .stat-card { border: 1px solid #444; padding: 10px; text-align: center; background: #0a0a0a; }
-        .stat-card span { display: block; font-size: 0.8rem; color: #888; }
-        .text-green { color: #00ff00; } .text-red { color: #ff3333; } .text-yellow { color: #ffcc00; }
-        .timer-container { border: 1px solid #444; padding: 10px; margin-bottom: 15px; background: #0a0a0a; }
-        .progress-bg { width: 100%; height: 12px; background: #222; border-radius: 6px; overflow: hidden; }
-        .progress-bar { height: 100%; background: #00ffcc; width: 0%; transition: width 0.5s linear; }
-        table { width: 100%; border-collapse: collapse; border: 1px solid #00ffcc; }
-        th { background: #0a1919; color: #ffcc00; padding: 10px; border: 1px solid #00ffcc; font-size: 0.8rem; }
-        td { padding: 10px; text-align: center; border: 1px solid #222; font-size: 0.9rem; color: #fff; }
-        .pred-big { color: #ffcc00; font-weight: bold; } .pred-small { color: #00ffcc; font-weight: bold; }
-        .badge { padding: 4px 8px; border-radius: 3px; font-size: 0.8rem; font-weight: bold; color: #000; display: inline-block; min-width: 60px;}
-        .win { background: #00ff00; } .lose { background: #ff3333; color: #fff; }
-        .wait { background: #ffcc00; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0.5; } }
-    </style>
-</head>
-<body>
+async function fetchData() {
+        const statusEl = document.getElementById("sys-log");
+        statusEl.innerText = "Searching for data path...";
+        
+        // KITA GUNA PROXY YANG PALING 'OPEN' SEKARANG
+        const target = "https://draw.ar-lottery01.com/WinGo/WinGo_1M/GetHistoryIssuePage.json";
+        const bridge = "https://api.allorigins.win/get?url=" + encodeURIComponent(target) + "&callback=?";
 
-    <div id="login-page">
-        <h1>MySGAME</h1>
-        <p>TERMINAL AKSES V5.0</p>
-        <input type="password" id="access-id" class="input-box" placeholder="Masukkan ID Akses">
-        <button class="btn" onclick="checkLogin()">MASUK SISTEM</button>
-    </div>
-
-    <div id="main-page">
-        <div class="header-box">
-            <h2 style="color:#ffeb3b">V5.0 AI PREDICTOR PRO</h2>
-            <div style="font-size:0.8rem; color:#aaa">System Owner: @WanXScript</div>
-        </div>
-
-        <div class="stats-grid">
-            <div class="stat-card"><span>WIN</span><strong id="win-count" class="text-green">0</strong></div>
-            <div class="stat-card"><span>LOSE</span><strong id="lose-count" class="text-red">0</strong></div>
-            <div class="stat-card"><span>WINRATE</span><strong id="win-rate" class="text-yellow">0%</strong></div>
-            <div class="stat-card"><span>STREAK</span><strong id="streak-count">0</strong></div>
-        </div>
-
-        <div class="timer-container">
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                <span id="live-clock">00:00:00</span>
-                <span>DRAW IN: <strong id="countdown" class="text-yellow">00s</strong></span>
-            </div>
-            <div class="progress-bg"><div id="progress-bar" class="progress-bar"></div></div>
-        </div>
-
-        <table>
-            <thead><tr><th>Period</th><th>Predik</th><th>Format</th><th>Result</th><th>Status</th></tr></thead>
-            <tbody id="table-body"></tbody>
-        </table>
-        <div id="sys-log" style="font-size:0.75rem; color:#555; text-align:center; margin-top:10px;">Connecting...</div>
-    </div>
-
-<script>
-    const KEY = "Wan00";
-    // URL Google Script kau yang dah siap
-    const PROXY_URL = "https://script.google.com/macros/s/AKfycbyPx0OoPEAn0Iz8eVz_9F6jZj6RqVtQUYW84sgtPhmmbaUR0AwCtWpfV4N-IshmeFGJ/exec";
-
-    let historyData = [];
-    let lastProcessedIssue = null;
-    let winCount = 0; let loseCount = 0; let streak = 0;
-
-    function checkLogin() {
-        if (document.getElementById("access-id").value === KEY) {
-            document.getElementById("login-page").style.display = "none";
-            document.getElementById("main-page").style.display = "block";
-            startSystem();
-        } else { alert("Akses Ditolak!"); }
-    }
-
-    function bs(n) { return parseInt(n) >= 5 ? "BIG" : "SMALL"; }
-
-    function predictLogic(list) {
-        const r = list.slice(0, 5).map(x => bs(x.number));
-        if (r[0] === r[1] && r[1] === r[2]) return { p: r[0], f: "DRAGON" };
-        if (r[0] !== r[1] && r[1] !== r[2]) return { p: (r[0] === "BIG" ? "SMALL" : "BIG"), f: "P-PONG" };
-        return { p: r[0], f: "SHADOW" };
-    }
-
-    async function fetchData() {
         try {
-            const res = await fetch(PROXY_URL);
-            const json = await res.json();
-            const list = json.data.list;
-            const latest = list[0];
-            const issue = String(latest.issue || latest.issueNumber);
+            // Kita guna cara JSONP (Cara paling kuno tapi paling berkesan pintas CORS)
+            const script = document.createElement('script');
+            script.src = bridge;
+            
+            // Kita buat fungsi sementara untuk tangkap data
+            window.handleData = function(response) {
+                const json = JSON.parse(response.contents);
+                const list = json.data.list;
+                const latest = list[0];
+                const issue = String(latest.issue || latest.issueNumber);
 
-            if (issue !== lastProcessedIssue) {
-                historyData.forEach(item => {
-                    if (item.issue === issue && item.status === "WAIT") {
-                        const s = bs(latest.number);
-                        item.result = s + " (" + latest.number + ")";
-                        if (item.pred === s) { 
-                            winCount++; item.status = "WIN"; 
-                            streak = streak < 0 ? 1 : streak + 1; 
-                        } else { 
-                            loseCount++; item.status = "LOSE"; 
-                            streak = streak > 0 ? -1 : streak - 1; 
+                if (issue !== lastProcessedIssue) {
+                    historyData.forEach(item => {
+                        if (item.issue === issue && item.status === "WAIT") {
+                            const s = bs(latest.number);
+                            item.result = s + " (" + latest.number + ")";
+                            if (item.pred === s) { 
+                                winCount++; item.status = "WIN"; 
+                                streak = streak < 0 ? 1 : streak + 1; 
+                            } else { 
+                                loseCount++; item.status = "LOSE"; 
+                                streak = streak > 0 ? -1 : streak - 1; 
+                            }
                         }
-                    }
-                });
+                    });
 
-                const ai = predictLogic(list);
-                const nextIssue = (BigInt(issue) + 1n).toString();
+                    const ai = predictLogic(list);
+                    const nextIssue = (BigInt(issue) + 1n).toString();
 
-                historyData.unshift({
-                    issue: nextIssue,
-                    pred: ai.p, format: ai.f, result: "Waiting", status: "WAIT"
-                });
-                if (historyData.length > 8) historyData.pop();
-                lastProcessedIssue = issue;
-                renderTable();
-            }
-            document.getElementById("sys-log").innerText = "SERVER ONLINE - DATA SYNCED";
-            document.getElementById("sys-log").style.color = "#00ffcc";
+                    historyData.unshift({
+                        issue: nextIssue,
+                        pred: ai.p, format: ai.f, result: "Waiting", status: "WAIT"
+                    });
+                    if (historyData.length > 8) historyData.pop();
+                    lastProcessedIssue = issue;
+                    renderTable();
+                }
+                statusEl.innerText = "SERVER ONLINE - BYPASSED";
+                statusEl.style.color = "#00ffcc";
+                document.body.removeChild(script); // Cuci balik
+            };
+
+            // Panggil data!
+            fetch(bridge.replace('callback=?', ''))
+            .then(res => res.json())
+            .then(data => window.handleData(data))
+            .catch(err => { throw err });
+
         } catch (e) { 
-            document.getElementById("sys-log").innerText = "RECONNECTING..."; 
-            document.getElementById("sys-log").style.color = "#ff3333";
+            statusEl.innerText = "FIREWALL DETECTED - REFRESHING..."; 
+            statusEl.style.color = "#ff3333";
         }
     }
-
-    function renderTable() {
-        const tbody = document.getElementById("table-body");
-        tbody.innerHTML = historyData.map(row => `
-            <tr>
-                <td>${row.issue.slice(-5)}</td>
-                <td class="${row.pred === 'BIG' ? 'pred-big' : 'pred-small'}">${row.pred}</td>
-                <td style="color:#888; font-size:0.7rem;">${row.format}</td>
-                <td>${row.result}</td>
-                <td><span class="badge ${row.status.toLowerCase()}">${row.status}</span></td>
-            </tr>
-        `).join('');
-        
-        document.getElementById("win-count").innerText = winCount;
-        document.getElementById("lose-count").innerText = loseCount;
-        const total = winCount + loseCount;
-        document.getElementById("win-rate").innerText = total > 0 ? Math.round((winCount/total)*100) + "%" : "0%";
-        document.getElementById("streak-count").innerText = (streak > 0 ? "+" : "") + streak;
-    }
-
-    function startSystem() {
-        setInterval(() => {
-            const now = new Date();
-            const sec = now.getSeconds();
-            document.getElementById("live-clock").innerText = now.toLocaleTimeString();
-            document.getElementById("countdown").innerText = (60 - sec) + "s";
-            document.getElementById("progress-bar").style.width = (sec / 60 * 100) + "%";
-            // Ambil data setiap 5 saat
-            if (sec % 5 === 0) fetchData();
-        }, 1000);
-        fetchData();
-    }
-</script>
-</body>
-</html>

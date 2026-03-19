@@ -1,62 +1,115 @@
-async function fetchData() {
-        const statusEl = document.getElementById("sys-log");
-        statusEl.innerText = "Searching for data path...";
-        
-        // KITA GUNA PROXY YANG PALING 'OPEN' SEKARANG
-        const target = "https://draw.ar-lottery01.com/WinGo/WinGo_1M/GetHistoryIssuePage.json";
-        const bridge = "https://api.allorigins.win/get?url=" + encodeURIComponent(target) + "&callback=?";
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MySGAME V5 - ANTI RECONNECT</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Share Tech Mono', monospace; background: #050505; color: #00ffcc; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        #login-page { background: #000; border: 1px solid #00ffcc; padding: 30px; text-align: center; width: 90%; max-width: 400px; }
+        .input-box { width: 100%; padding: 12px; background: #111; border: 1px solid #444; color: #00ffcc; text-align: center; margin-bottom: 15px; font-family: inherit; }
+        .btn { width: 100%; padding: 12px; background: #00ffcc; color: #000; font-weight: bold; border: none; cursor: pointer; font-family: inherit; }
+        #main-page { display: none; width: 100%; max-width: 500px; padding: 15px; }
+        .box { border: 1px solid #00ffcc; padding: 15px; margin-bottom: 10px; background: rgba(0,255,204,0.05); text-align: center; }
+        .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; border: 1px solid #333; font-size: 0.8rem; }
+        th, td { border: 1px solid #222; padding: 8px; text-align: center; }
+        th { background: #0a1919; color: #ffcc00; }
+        .badge { padding: 3px 6px; font-weight: bold; color: #000; border-radius: 2px; }
+        .win { background: #0f0; } .lose { background: #f33; color: #fff; } .wait { background: #ff0; animation: bl 1s infinite; }
+        @keyframes bl { 50% { opacity: 0.3; } }
+    </style>
+</head>
+<body>
 
+    <div id="login-page">
+        <h1>MySGAME V5</h1>
+        <p style="color:#666; font-size:0.8rem; margin-bottom:15px;">STABLE SERVER MODE</p>
+        <input type="password" id="pass" class="input-box" placeholder="ACCESS KEY">
+        <button class="btn" onclick="start()">CONNECT SYSTEM</button>
+    </div>
+
+    <div id="main-page">
+        <div class="box">
+            <h2 id="status" style="color:#f33">RECONNECTING...</h2>
+            <h1 id="timer">00s</h1>
+        </div>
+        <div class="stats">
+            <div class="box">WIN: <span id="w" style="color:#0f0">0</span></div>
+            <div class="box">LOSE: <span id="l" style="color:#f33">0</span></div>
+        </div>
+        <table>
+            <thead><tr><th>PERIOD</th><th>PRED</th><th>RESULT</th><th>STAT</th></tr></thead>
+            <tbody id="logs"></tbody>
+        </table>
+    </div>
+
+<script>
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyPx0OoPEAn0Iz8eVz_9F6jZj6RqVtQUYW84sgtPhmmbaUR0AwCtWpfV4N-IshmeFGJ/exec";
+    let history = []; let lastId = null; let win = 0; let lose = 0;
+
+    async function getData() {
         try {
-            // Kita guna cara JSONP (Cara paling kuno tapi paling berkesan pintas CORS)
-            const script = document.createElement('script');
-            script.src = bridge;
-            
-            // Kita buat fungsi sementara untuk tangkap data
-            window.handleData = function(response) {
-                const json = JSON.parse(response.contents);
-                const list = json.data.list;
-                const latest = list[0];
-                const issue = String(latest.issue || latest.issueNumber);
+            // Gunakan Google Script kau yang dah 'Anyone' tadi
+            const res = await fetch(GAS_URL);
+            const data = await res.json();
+            const list = data.data.list;
+            const top = list[0];
+            const issue = String(top.issue);
 
-                if (issue !== lastProcessedIssue) {
-                    historyData.forEach(item => {
-                        if (item.issue === issue && item.status === "WAIT") {
-                            const s = bs(latest.number);
-                            item.result = s + " (" + latest.number + ")";
-                            if (item.pred === s) { 
-                                winCount++; item.status = "WIN"; 
-                                streak = streak < 0 ? 1 : streak + 1; 
-                            } else { 
-                                loseCount++; item.status = "LOSE"; 
-                                streak = streak > 0 ? -1 : streak - 1; 
-                            }
-                        }
-                    });
+            document.getElementById("status").innerText = "ONLINE";
+            document.getElementById("status").style.color = "#00ffcc";
 
-                    const ai = predictLogic(list);
-                    const nextIssue = (BigInt(issue) + 1n).toString();
+            if (issue !== lastId) {
+                history.forEach(h => {
+                    if (h.id === issue && h.status === "WAIT") {
+                        const s = parseInt(top.number) >= 5 ? "BIG" : "SMALL";
+                        h.res = s;
+                        if (h.pred === s) { win++; h.status = "WIN"; }
+                        else { lose++; h.status = "LOSE"; }
+                    }
+                });
 
-                    historyData.unshift({
-                        issue: nextIssue,
-                        pred: ai.p, format: ai.f, result: "Waiting", status: "WAIT"
-                    });
-                    if (historyData.length > 8) historyData.pop();
-                    lastProcessedIssue = issue;
-                    renderTable();
-                }
-                statusEl.innerText = "SERVER ONLINE - BYPASSED";
-                statusEl.style.color = "#00ffcc";
-                document.body.removeChild(script); // Cuci balik
-            };
+                const nextId = (BigInt(issue) + 1n).toString();
+                const myPred = parseInt(top.number) >= 5 ? "BIG" : "SMALL";
 
-            // Panggil data!
-            fetch(bridge.replace('callback=?', ''))
-            .then(res => res.json())
-            .then(data => window.handleData(data))
-            .catch(err => { throw err });
-
-        } catch (e) { 
-            statusEl.innerText = "FIREWALL DETECTED - REFRESHING..."; 
-            statusEl.style.color = "#ff3333";
+                history.unshift({ id: nextId, pred: myPred, res: "...", status: "WAIT" });
+                if (history.length > 6) history.pop();
+                lastId = issue;
+                render();
+            }
+        } catch (e) {
+            document.getElementById("status").innerText = "RECONNECTING...";
+            document.getElementById("status").style.color = "#f33";
         }
     }
+
+    function render() {
+        document.getElementById("logs").innerHTML = history.map(h => `
+            <tr>
+                <td>${h.id.slice(-4)}</td>
+                <td style="color:${h.pred === 'BIG' ? '#ffcc00' : '#00ffcc'}">${h.pred}</td>
+                <td>${h.res}</td>
+                <td><span class="badge ${h.status.toLowerCase()}">${h.status}</span></td>
+            </tr>
+        `).join('');
+        document.getElementById("w").innerText = win;
+        document.getElementById("l").innerText = lose;
+    }
+
+    function start() {
+        if (document.getElementById("pass").value === "Wan00") {
+            document.getElementById("login-page").style.display = "none";
+            document.getElementById("main-page").style.display = "block";
+            setInterval(() => {
+                const s = new Date().getSeconds();
+                document.getElementById("timer").innerText = (60 - s) + "s";
+                if (s % 5 === 0) getData();
+            }, 1000);
+            getData();
+        } else { alert("KEY SALAH"); }
+    }
+</script>
+</body>
+</html>
